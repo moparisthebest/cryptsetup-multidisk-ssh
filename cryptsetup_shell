@@ -1,0 +1,8 @@
+#!/usr/bin/ash
+sed 's/ /\n/g' /proc/cmdline | grep = > /linux.cmdline
+. /linux.cmdline
+rm /linux.cmdline
+. /init_functions
+. /hooks/encrypt-multidisk-ssh
+
+run_hook
