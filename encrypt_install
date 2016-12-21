@@ -1,4 +1,9 @@
 #!/bin/bash
+make_etc_passwd() {
+    echo 'root:x:0:0:root:/root:/bin/cryptsetup_shell' > "${BUILDROOT}"/etc/passwd
+    echo '/bin/cryptsetup_shell' > "${BUILDROOT}"/etc/shells
+}
+
 
 build() {
     local mod
@@ -19,11 +24,25 @@ build() {
     add_file "/usr/lib/udev/rules.d/95-dm-notify.rules"
     add_file "/usr/lib/initcpio/udev/11-dm-initramfs.rules" "/usr/lib/udev/rules.d/11-dm-initramfs.rules"
 
+    add_binary "/usr/share/cryptsetup-multidisk-ssh/bin/cryptsetup_shell" "/bin/cryptsetup_shell"
+    add_binary "/usr/share/cryptsetup-multidisk-ssh/bin/query_password" "/bin/query_password"
+
+    make_etc_passwd
+
     add_runscript
 }
 
 help() {
     cat <<HELPEOF
+This hook is a drop in replacement for the encrypt multidisk hook and also allows for
+multiple encrypted root devices to be unlocked remotely over SSH. It works with both
+mkinitcpio-dropbear and mkinitcpio-tinyssh hooks. It DOES NOT perform any
+network interface configuration.
+
+Use this hook in combination with any early userspace networking hook, such as
+mkinitcpio-netconf or mkinitcpio-ppp. Place this hook AFTER any network
+configuration hook and BEFORE the filesystems hook.
+
 This hook allows for multiple encrypted root devices. Users should specify the
 device to be unlocked using 'cryptdevice=device:dmname' on the kernel command
 line, where 'device' is the path to the raw device, and 'dmname' is the name 

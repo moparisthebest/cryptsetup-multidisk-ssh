@@ -69,14 +69,6 @@ EOF
             echo "Use 'cryptdevice=${root}:root root=/dev/mapper/root' instead."
         }
 
-        query_password() {
-            echo ""
-            echo "A password is required to access the ${cryptname} volume:"
-            read -rsp "Enter passphrase for ${resolved}: " password
-            echo -n "${password}" > ${cpassfile}
-            echo ""
-        }
-
         for cryptopt in ${cryptoptions//,/ }; do
             case ${cryptopt} in
                 allow-discards)
@@ -104,13 +96,22 @@ EOF
                 if [ ${dopassphrase} -gt 0 ]; then
 
                     if [ ! -f ${cpassfile} ]; then
-                        query_password
+                        query_password "${cryptname}" "${resolved}" "${cpassfile}"
+                        if [ -f /.done ]; then
+                            break
+                        fi
                     fi
 
                     #loop until we get a real password
                     while ! eval cryptsetup --key-file ${cpassfile} open --type luks ${resolved} ${cryptname} ${cryptargs} ${CSQUIET}; do
-                        query_password
+                        query_password "${cryptname}" "${resolved}" "${cpassfile}"
+                        if [ -f /.done ]; then
+                            break
+                        fi
                     done
+                    if [ -f /.done ]; then
+                        break
+                    fi
                 fi
                 if [ -e "/dev/mapper/${cryptname}" ]; then
                     if [ ${DEPRECATED_CRYPT} -eq 1 ]; then
@@ -167,6 +168,8 @@ EOF
         count=$((count + 1))
     done
     rm -f ${cpassfile}
+    touch /.done
+    killall query_password
 }
 
 # vim: set ft=sh ts=4 sw=4 et:
